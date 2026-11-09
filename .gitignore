@@ -1,0 +1,23 @@
+# Python
+ml-service/venv/
+__pycache__/
+*.pyc
+
+# Node
+frontend/node_modules/
+backend/node_modules/
+
+# Env
+.env
+*.env.local
+
+# ML artifacts (large, not for git)
+ml-service/models/*.pt
+ml-service/models/*.onnx
+training/datasets/*
+
+# Insightface model cache (downloaded at runtime, not checked in)
+.insightface/
+
+# OS
+.DS_Store

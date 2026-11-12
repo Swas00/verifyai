@@ -33,9 +33,11 @@ def aggregate(mrz: dict, face: dict, tamper: dict, blacklist: dict) -> dict:
     score = 0
     reasons = []
 
-    if mrz.get("found") and not mrz.get("checksum_ok", True):
+    if mrz.get("found") and mrz.get("checksum_ok") is False:
         score += WEIGHTS["mrz_checksum_fail"]
         reasons.append("MRZ checksum failed")
+    elif mrz.get("found") and mrz.get("checksum_ok") is None:
+        reasons.append("MRZ checksum unverifiable (low OCR confidence) — not scored")
 
     if face.get("found") and not face.get("match", True):
         score += WEIGHTS["face_mismatch"]

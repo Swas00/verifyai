@@ -16,6 +16,13 @@ ml-service/models/*.pt
 ml-service/models/*.onnx
 training/datasets/*
 
+# Sample documents pulled from licensed datasets (CC BY-NC-ND etc.) —
+# never redistribute these in the public repo; see Review Notes in the plan doc
+demo/
+
+# Local MongoDB data directory (dev convenience, not for git)
+.mongodb-data/
+
 # Insightface model cache (downloaded at runtime, not checked in)
 .insightface/
 

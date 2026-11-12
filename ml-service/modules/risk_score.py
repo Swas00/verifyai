@@ -43,9 +43,13 @@ def aggregate(mrz: dict, face: dict, tamper: dict, blacklist: dict) -> dict:
         score += WEIGHTS["face_mismatch"]
         reasons.append(f"Face match score {face.get('score', 0):.2f} below threshold")
 
-    if tamper.get("tampered"):
+    if tamper.get("tampered") is True:
         score += WEIGHTS["tamper_flag"]
         reasons.append(f"ELA tamper flag (mean {tamper.get('ela_mean', 0):.1f})")
+    elif tamper.get("tampered") is None:
+        reasons.append(
+            f"ELA tamper check informational only (mean {tamper.get('ela_mean', 0):.2f}) — not scored"
+        )
 
     if blacklist.get("hit"):
         score += WEIGHTS["blacklist_hit"]

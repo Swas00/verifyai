@@ -1,9 +1,17 @@
 """OCR extraction: printed fields via EasyOCR, MRZ zone via passporteye."""
 
+import re
+from datetime import datetime
+
 import easyocr
 from passporteye import read_mrz
 
 _reader = None
+
+_LABEL_HINTS = ("/", "date", "nationality", "sex", "authority", "code",
+                "type", "no.", "no:", "surname", "given", "nom", "apellidos")
+_NOISE_HINTS = ("does-not-exist", ".com", "photo")
+_DATE_RE = re.compile(r"\b(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})\b")
 
 
 def _get_reader() -> easyocr.Reader:
@@ -18,6 +26,53 @@ def extract_text_fields(image_path: str) -> list[str]:
     reader = _get_reader()
     results = reader.readtext(image_path, detail=0)
     return results
+
+
+def _looks_like_label_or_noise(line: str) -> bool:
+    lower = line.lower()
+    return any(h in lower for h in _LABEL_HINTS) or any(h in lower for h in _NOISE_HINTS)
+
+
+def _value_after_label(lines: list[str], label_substring: str, max_lookahead: int = 4) -> str | None:
+    """First plausible value line within `max_lookahead` lines after a label match."""
+    for i, line in enumerate(lines):
+        if label_substring in line.lower():
+            for candidate in lines[i + 1 : i + 1 + max_lookahead]:
+                if candidate.strip() and not _looks_like_label_or_noise(candidate):
+                    return candidate.strip()
+    return None
+
+
+def _date_after_label(lines: list[str], label_substring: str, max_lookahead: int = 5) -> str | None:
+    """Parsed `DD Mon YYYY` value after a label, returned as MRZ-style YYMMDD."""
+    for i, line in enumerate(lines):
+        if label_substring in line.lower():
+            for candidate in lines[i + 1 : i + 1 + max_lookahead]:
+                match = _DATE_RE.search(candidate)
+                if match:
+                    try:
+                        dt = datetime.strptime(" ".join(match.groups()), "%d %b %Y")
+                    except ValueError:
+                        continue
+                    return dt.strftime("%y%m%d")
+    return None
+
+
+def extract_viz_fields(image_path: str) -> dict:
+    """Best-effort read of the printed (visual inspection zone) fields.
+
+    Tested as far more reliable than the MRZ zone on this OCR stack (see
+    Review Notes) — callers needing surname/DOB for matching (e.g. the
+    blacklist lookup) should prefer this over `extract_mrz`'s fields.
+    Any field not confidently located comes back None; this is best-effort
+    label scanning, not a layout parser, so callers must handle gaps.
+    """
+    lines = extract_text_fields(image_path)
+    return {
+        "surname": _value_after_label(lines, "surname"),
+        "given_names": _value_after_label(lines, "given names"),
+        "date_of_birth": _date_after_label(lines, "date of birth"),
+    }
 
 
 # Below this, passporteye's own OCR is dropping and misreading characters

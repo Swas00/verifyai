@@ -12,11 +12,17 @@ from modules import blacklist, face_match, ocr, risk_score, tamper
 
 def analyze(image_path: str, selfie_path: str) -> dict:
     mrz = ocr.extract_mrz(image_path)
+    viz = ocr.extract_viz_fields(image_path)
     face = face_match.match(image_path, selfie_path)
     tamper_result = tamper.analyze(image_path)
 
-    if mrz.get("found"):
-        bl = blacklist.check(mrz.get("surname", ""), mrz.get("date_of_birth", ""))
+    # Blacklist lookup prefers the printed-field (VIZ) read over the MRZ
+    # parse: tested far more reliable on this OCR stack (see Review Notes).
+    # Falls back to MRZ fields only when VIZ extraction found nothing.
+    surname = viz.get("surname") or mrz.get("surname") or ""
+    date_of_birth = viz.get("date_of_birth") or mrz.get("date_of_birth") or ""
+    if surname and date_of_birth:
+        bl = blacklist.check(surname, date_of_birth)
     else:
         bl = {"checked": False, "hit": False, "reason": None}
 
@@ -24,6 +30,7 @@ def analyze(image_path: str, selfie_path: str) -> dict:
 
     return {
         "mrz": mrz,
+        "viz": viz,
         "face_match": face,
         "tamper": tamper_result,
         "blacklist": bl,

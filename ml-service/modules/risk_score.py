@@ -42,6 +42,15 @@ def aggregate(mrz: dict, face: dict, tamper: dict, blacklist: dict) -> dict:
     if face.get("found") and not face.get("match", True):
         score += WEIGHTS["face_mismatch"]
         reasons.append(f"Face match score {face.get('score', 0):.2f} below threshold")
+    elif not face.get("found"):
+        missing = []
+        if not face.get("document_face_detected", False):
+            missing.append("document")
+        if not face.get("selfie_face_detected", False):
+            missing.append("selfie")
+        reasons.append(
+            f"Face match unverifiable: no face detected in {' or '.join(missing)} image — not scored"
+        )
 
     if tamper.get("tampered") is True:
         score += WEIGHTS["tamper_flag"]

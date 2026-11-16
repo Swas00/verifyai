@@ -63,12 +63,28 @@ This replaces the plan's originally specified Ethereum/Hardhat/Polygon
 approach — same tamper-evidence property, no wallet/gas/RPC
 infrastructure. See the plan doc's Review Notes for the reasoning.
 
+## Testing
+
+```bash
+npm test
+```
+
+Unit tests for the hash chain plus supertest integration tests for auth,
+screening, cases and `/api/audit/verify` (including tamper and deletion
+detection). Needs the `mongod` binary on PATH — tests spawn a throwaway
+instance on a random port; the ml-service is stubbed.
+
+## Hardening
+
+- `/api/auth/login`: 10 attempts / 15 min / IP (`LOGIN_RATE_LIMIT`).
+- `/api/screening`: 30 requests / min / IP (`SCREENING_RATE_LIMIT`).
+- Uploads: JPEG/PNG only (mimetype **and** magic bytes), 10MB each,
+  2 files max; ML call has a 60s timeout. JSON bodies capped at 100kb.
+
 ## Known limitations (Phase 2)
 
-- No automated tests yet for the routes (manual curl testing only so
-  far) — unit tests for `hashChain`/`verifyChain` and route integration
-  tests are still open.
 - `Blacklist` model exists for the Phase 3 admin panel but has no routes
   yet — blacklist entries are managed via `ml-service/scripts/seed_blacklist.py`
   for now, both services pointing at the same MongoDB collection.
-- No rate limiting or input size limits beyond multer's 10MB file cap.
+- Rate limits are per-IP and in-memory (reset on restart, not shared
+  across instances).

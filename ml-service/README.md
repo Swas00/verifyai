@@ -92,9 +92,9 @@ against the `trainingdatapro/generated-passports-segmentation` and
 - **Blacklist matching is exact** (surname + DOB, uppercase). No fuzzy
   matching — a one-character spelling difference misses a real hit. This
   is a known simplification, not a security claim.
-- No document-type validation — a non-document image doesn't error, it
-  just produces a low-confidence LOW-risk report with every check
-  reporting "not found."
+- Document-type validation is a heuristic: `/analyze` returns 422 when
+  no MRZ, printed field, or portrait is found. A non-ID image that happens
+  to contain a face still passes.
 
 See the plan's Review Notes section for dated findings and the
 reasoning behind each decision above.

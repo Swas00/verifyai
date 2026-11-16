@@ -10,10 +10,31 @@ import json
 from modules import blacklist, face_match, ocr, risk_score, tamper
 
 
+class InvalidDocumentError(ValueError):
+    """The upload doesn't look like an identity document at all."""
+
+
+def looks_like_document(mrz: dict, viz: dict, face: dict) -> bool:
+    """A real ID shows at least one of: an MRZ, a printed field, a portrait.
+
+    If none are found the image is almost certainly not a document, so we
+    reject instead of returning a misleading LOW-risk report.
+    """
+    return bool(
+        mrz.get("found")
+        or any(viz.values())
+        or face.get("document_face_detected")
+    )
+
+
 def analyze(image_path: str, selfie_path: str) -> dict:
     mrz = ocr.extract_mrz(image_path)
     viz = ocr.extract_viz_fields(image_path)
     face = face_match.match(image_path, selfie_path)
+    if not looks_like_document(mrz, viz, face):
+        raise InvalidDocumentError(
+            "No MRZ, printed fields, or portrait found — this does not look like an identity document"
+        )
     tamper_result = tamper.analyze(image_path)
 
     # Blacklist lookup prefers the printed-field (VIZ) read over the MRZ
